@@ -7,58 +7,55 @@ const socket = io.connect("http://localhost:3001");
 
 function StartedGamePlay() {
   const { room, userName, host, updatePosition, position } = useStateContext();
-  const [round, updateNum] = useState(0);
-  const [userInputLat, updateUserInputLat] = useState();
-  const [userInputLang, updateUserInputLang] = useState();
+  const [round, updateNum] = useState(1);
+  const [userInput, updateUserInput] = useState();
+  const [userScore, updateUserScore] = useState();
+
+  const [correctAnswer, updateCorrectAnswer] = useState();
 
   function NextRound() {
     socket.emit("next_round", room, round + 1);
     updateNum(round + 1);
-    updateUserInputLang();
-    updateUserInputLat();
+    updateUserInput();
   }
 
   function sendUserInput() {
-    socket.emit(
-      "sending_user_lat_and_lang",
-      room,
-      userName,
-      userInputLat,
-      userInputLang
-    );
+    socket.emit("send_user_input", room, userName, userInput);
     NextRound();
+  }
+
+  function checkAnswer() {
+    console.log(correctAnswer);
+    console.log(userInput);
+    const results = Math.abs(correctAnswer - userInput);
+    console.log(results);
   }
 
   useEffect(() => {
     socket.on("next_round_detected", (round) => {
-      console.log(round.round);
       updateNum(round.round);
-    });
-
-    socket.on("incoming_lat_lang", (data) => {
-      console.log(data);
+      updateCorrectAnswer(round.answer);
+      setTimeout(() => {
+        checkAnswer();
+      }, "1000");
     });
   }, [socket]);
 
   return (
     <div>
-      {round}
-      <br></br>
-      {position}
-      <br></br>
       {host && <button onClick={() => NextRound()}>Click Me</button>}
+      <br></br>
+      {correctAnswer}
+      <br></br>
+
       {round === position - 1 && (
         <div>
           <input
-            onChange={(e) => updateUserInputLat(e.target.value)}
+            onChange={(e) => updateUserInput(e.target.value)}
             id="lat_user_input"
             type={"number"}
           ></input>
-          <input
-            onChange={(e) => updateUserInputLang(e.target.value)}
-            id="lang_user_input"
-            type={"number"}
-          ></input>
+
           <button onClick={() => sendUserInput()}>Send Data</button>
         </div>
       )}
@@ -106,7 +103,11 @@ function WaitingScreen() {
         <StartedGamePlay />
       ) : (
         <div>
-          <button onClick={() => joinRoom()}>Click me</button>
+          {players.length === 0 ? (
+            <button onClick={() => joinRoom()}>Click me</button>
+          ) : (
+            <></>
+          )}
           {host && (
             <button onClick={() => startroom()}>Click Me to start </button>
           )}
